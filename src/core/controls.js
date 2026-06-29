@@ -73,7 +73,7 @@ export class PlayerController {
       const forward = new THREE.Vector3();
       this.camera.getWorldDirection(forward);
       forward.y = 0; forward.normalize();
-      const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).negate();
+      const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0));
 
       const moveVec = new THREE.Vector3();
       moveVec.addScaledVector(forward, -dir.z);
