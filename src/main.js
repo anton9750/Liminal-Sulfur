@@ -93,6 +93,7 @@ player.onFootstep = () => audioSystem.playFootstep();
 
 startBtn.addEventListener('click', () => {
   menuEl.style.display = 'none';
+  sceneManager.renderer.domElement.focus();  // add this
   player.lock();
   audioSystem.start();
   animate();
