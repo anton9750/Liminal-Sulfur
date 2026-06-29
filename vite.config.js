@@ -1,6 +1,5 @@
-// vite.config.js
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/YOUR-REPO-NAME/',
+  base: '/Liminal-Sulfur/',     // ← Change this
 })
