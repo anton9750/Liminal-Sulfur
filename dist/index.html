@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>THE BACKROOMS</title>
+<style>
+  html, body {
+    margin:0; padding:0; overflow:hidden;
+    background:#000; font-family: 'Courier New', monospace;
+  }
+  canvas { display:block; }
+
+  #crosshair {
+    position:absolute; top:50%; left:50%; width:6px; height:6px;
+    margin:-3px 0 0 -3px; border-radius:50%;
+    background:rgba(255,255,255,0.5);
+    pointer-events:none; z-index:5;
+  }
+
+  #hud {
+    position:absolute; bottom:18px; left:18px; color:#cfc99a;
+    text-shadow: 0 0 6px #000; font-size:13px; z-index:5;
+    user-select:none; pointer-events:none; line-height:1.5;
+  }
+  #sanityBarOuter {
+    width:200px; height:10px; border:1px solid #888; margin-top:4px;
+    background:rgba(0,0,0,0.4);
+  }
+  #sanityBarInner {
+    height:100%; width:100%; background:#c9b35b;
+    transition:width .3s linear, background .5s linear;
+  }
+
+  #vignette {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:4;
+    box-shadow: inset 0 0 200px 80px rgba(0,0,0,0.85);
+    opacity:0.6; transition: opacity 0.5s linear;
+  }
+
+  #staticOverlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:6; opacity:0;
+    background:#fff; mix-blend-mode:difference;
+  }
+
+  /* Screen distortion overlay — animated scanlines */
+  #distortOverlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:7; opacity:0;
+    background: repeating-linear-gradient(
+      0deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 4px
+    );
+  }
+
+  /* Jump scare image — solid black face-fill */
+  #jumpScare {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:70; opacity:0;
+    transition: opacity 0.05s;
+    display:flex; align-items:center; justify-content:center;
+    background:#000;
+    font-size:200px; line-height:1;
+  }
+
+  /* ── MENU ── */
+  #menu {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:radial-gradient(ellipse at center, #2a2710 0%, #050400 100%);
+    color:#d8cf8e; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; z-index:50; text-align:center;
+  }
+  #menu h1 { font-size:42px; letter-spacing:6px; margin-bottom:6px; text-shadow: 0 0 20px #c9b35b88; }
+  #menu p { max-width:520px; color:#a89c5a; font-size:14px; line-height:1.6; margin:4px 0 26px; }
+  #menu button {
+    background:#1d1a0c; border:1px solid #c9b35b; color:#d8cf8e;
+    padding:14px 38px; font-size:16px; letter-spacing:2px;
+    cursor:pointer; font-family:inherit;
+  }
+  #menu button:hover { background:#33301a; }
+  #hint { margin-top:18px; font-size:12px; color:#776c3c; }
+  #improvements {
+    margin-top:22px; font-size:11px; color:#554e28; max-width:480px;
+    line-height:1.6; border-top:1px solid #333; padding-top:14px;
+  }
+
+  /* ── DEATH ── */
+  #deathScreen {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:rgba(0,0,0,0.92); color:#a33; display:none; z-index:60;
+    flex-direction:column; align-items:center; justify-content:center;
+    font-size:34px; letter-spacing:6px; text-align:center;
+  }
+  #deathScreen span { font-size:14px; color:#888; margin-top:14px; letter-spacing:2px; }
+  #deathScreen .flavor {
+    font-size:12px; color:#555; margin-top:8px; letter-spacing:1px;
+    max-width:420px; line-height:1.6; font-style:italic;
+  }
+
+  /* ── WIN ── */
+  #winScreen {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:radial-gradient(ellipse at center, #082215 0%, #000 100%);
+    color:#44ffaa; display:none; z-index:60;
+    flex-direction:column; align-items:center; justify-content:center;
+    font-size:30px; letter-spacing:4px; text-align:center;
+  }
+  #winScreen p { font-size:14px; color:#55bb88; margin-top:12px; max-width:440px; line-height:1.6; }
+  #winScreen span { font-size:13px; color:#336644; margin-top:20px; letter-spacing:2px; }
+
+  #levelText {
+    position:absolute; top:18px; left:18px; z-index:5; color:#cfc99a;
+    font-size:12px; opacity:0.85; pointer-events:none; user-select:none;
+    transition: color 1s linear;
+  }
+</style>
+  <script type="module" crossorigin src="/Liminal-Sulfur/assets/index-BuscGPGd.js"></script>
+</head>
+<body>
+
+<!-- MENU -->
+<div id="menu">
+  <h1>THE BACKROOMS</h1>
+  <p>You noclipped into Level 0. Endless yellow halls. Flickering fluorescent lights.
+  The hum of electricity that never stops. Find the pool rooms exit before something finds you.
+  Stay moving — standing still too long draws its attention.</p>
+  <button id="startBtn">ENTER</button>
+  <div id="hint">WASD to move &nbsp;·&nbsp; MOUSE to look &nbsp;·&nbsp; SHIFT to run &nbsp;·&nbsp; F flashlight</div>
+  <div id="improvements">
+    Enhanced: A* monster pathfinding · footsteps · breathing · growls · head bob ·
+    screen distortion · insanity-driven flicker · prop furniture · sticky notes · exit portal
+  </div>
+</div>
+
+<!-- DEATH -->
+<div id="deathScreen">
+  IT FOUND YOU
+  <span id="restartHint">click to respawn at the entrance</span>
+  <div class="flavor" id="deathFlavor"></div>
+</div>
+
+<!-- WIN -->
+<div id="winScreen">
+  YOU ESCAPED
+  <p>You found the Pool Rooms exit.<br>The humming fades. For now, you are free.</p>
+  <span>click to try again</span>
+</div>
+
+<!-- JUMP SCARE -->
+<div id="jumpScare">👁</div>
+
+<div id="crosshair"></div>
+<div id="vignette"></div>
+<div id="staticOverlay"></div>
+<div id="distortOverlay"></div>
+<div id="levelText">LEVEL 0</div>
+<div id="hud">
+  <div id="sanityLabel">SANITY</div>
+  <div id="sanityBarOuter"><div id="sanityBarInner"></div></div>
+</div>
+
+<script>
+// Random death flavor messages
+const DEATH_MSGS = [
+  "Its footsteps were silent on the carpet.",
+  "You heard it before you saw it. Then nothing.",
+  "Level 0 is not empty. You know that now.",
+  "The lights went out. You were not alone in the dark.",
+  "It had been following you for 12 minutes.",
+];
+document.getElementById('deathScreen').addEventListener('click', () => {});
+// Set random flavor on each load
+document.getElementById('deathFlavor').textContent =
+  DEATH_MSGS[Math.floor(Math.random() * DEATH_MSGS.length)];
+// Re-randomize each death via MutationObserver
+new MutationObserver(() => {
+  document.getElementById('deathFlavor').textContent =
+    DEATH_MSGS[Math.floor(Math.random() * DEATH_MSGS.length)];
+}).observe(document.getElementById('deathScreen'), { attributes: true, attributeFilter: ['style'] });
+</script>
+
+</body>
+</html>
