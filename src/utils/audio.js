@@ -57,9 +57,14 @@ export class AudioSystem {
   // ── Music loading and playback ────────────────────────────────────
   async loadMusic(url) {
     if (!this.audioCtx) return;
-    const res = await fetch(url);
-    const arrayBuffer = await res.arrayBuffer();
-    this.musicBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
+    try {
+      const res = await fetch(url);
+      const arrayBuffer = await res.arrayBuffer();
+      this.musicBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
+    } catch (e) {
+      console.error("Music load failed:", e);
+      throw e;
+    }
   }
 
   playMusic() {
@@ -88,10 +93,8 @@ export class AudioSystem {
     const ctx = this.audioCtx;
     const breathLoop = () => {
       if (!this.audioCtx) return;
-      // Inhale
       this._playBreathPuff(0.6, 1200, true);
       setTimeout(() => {
-        // Exhale
         if (!this.audioCtx) return;
         this._playBreathPuff(0.9, 800, false);
         setTimeout(breathLoop, 2200);
