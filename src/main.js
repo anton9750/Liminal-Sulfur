@@ -78,6 +78,13 @@ function respawnPlayer() {
   staticOverlay.style.opacity = '0';
   distortEl.style.opacity     = '0';
   vignetteEl.style.opacity    = '0.6';
+
+  // ── Stop music so it retrigggers next run ──
+  if (audioSystem.musicSource) {
+    audioSystem.musicSource.stop();
+    audioSystem.musicSource = null;
+  }
+
   player.lock();
 }
 
@@ -96,6 +103,7 @@ startBtn.addEventListener('click', () => {
   sceneManager.renderer.domElement.focus();  // add this
   player.lock();
   audioSystem.start();
+  audioSystem.loadMusic('/src/assets/music.mp3');
   animate();
 });
 
@@ -143,6 +151,7 @@ function updateSanityFX(sanity, dt, proximity) {
 const clock = new THREE.Clock();
 
 function animate() {
+  
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
   const t  = performance.now() / 1000;
@@ -161,6 +170,9 @@ function animate() {
     // Sanity drain: always slow, faster while idle
     sanity -= dt * (idleTimer > 4 ? 4.5 : 0.6);
     sanity = Math.max(0, Math.min(100, sanity));
+      if (sanity < 20 && !audioSystem.musicSource) {
+      audioSystem.playMusic();
+    }
 
     const playerPos = player.object.position;
 

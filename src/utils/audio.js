@@ -1,7 +1,7 @@
 // src/utils/audio.js
 // Synthesizes all game audio with the Web Audio API. No external assets.
 // Systems: ambient hum, footsteps (carpet thuds), breathing (sanity-tied),
-// monster growls, distant thumps, jump-scare sting, exit chime.
+// monster growls, distant thumps, jump-scare sting, exit chime, music.
 
 export class AudioSystem {
   constructor() {
@@ -13,6 +13,11 @@ export class AudioSystem {
     this.breathGain = null;
     this.humGain = null;
     this.monsterGrowlInterval = null;
+
+    // Music playback state
+    this.musicBuffer = null;
+    this.musicSource = null;
+    this.musicGain = null;
   }
 
   start() {
@@ -49,6 +54,35 @@ export class AudioSystem {
     }, 7000);
   }
 
+  // ── Music loading and playback ────────────────────────────────────
+  async loadMusic(url) {
+    if (!this.audioCtx) return;
+    const res = await fetch(url);
+    const arrayBuffer = await res.arrayBuffer();
+    this.musicBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
+  }
+
+  playMusic() {
+    if (!this.audioCtx || !this.musicBuffer || this.musicSource) return;
+    this.musicSource = this.audioCtx.createBufferSource();
+    this.musicSource.buffer = this.musicBuffer;
+    this.musicSource.loop = true;
+    
+    this.musicGain = this.audioCtx.createGain();
+    this.musicGain.gain.value = 0.4;
+    
+    this.musicSource.connect(this.musicGain).connect(this.masterGain);
+    this.musicSource.start();
+  }
+
+  stopMusic() {
+    if (this.musicSource) {
+      this.musicSource.stop();
+      this.musicSource.disconnect();
+      this.musicSource = null;
+    }
+  }
+
   // ── Breathing oscillator (LFO-shaped noise) ────────────────────────
   _startBreathing() {
     const ctx = this.audioCtx;
@@ -73,9 +107,8 @@ export class AudioSystem {
     const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < bufSize; i++) {
-      // Fade in then out for breath shape
       const t = i / bufSize;
-      const env = inhale ? Math.sin(t * Math.PI) : Math.sin(t * Math.PI);
+      const env = Math.sin(t * Math.PI);
       data[i] = (Math.random() * 2 - 1) * env * 0.5;
     }
     const src = ctx.createBufferSource();
@@ -118,7 +151,6 @@ export class AudioSystem {
     const baseFreq = 55 + Math.random() * 30;
     for (let i = 0; i < bufSize; i++) {
       const t = i / ctx.sampleRate;
-      // Modulated low rumble
       data[i] = Math.sin(2 * Math.PI * baseFreq * t + Math.sin(2 * Math.PI * 2 * t) * 3)
         * Math.exp(-t / dur * 2) * (0.6 + 0.4 * Math.random());
     }
@@ -142,7 +174,6 @@ export class AudioSystem {
   playJumpScare() {
     if (!this.audioCtx) return;
     const ctx = this.audioCtx;
-    // Low BOOM
     const boom = ctx.createOscillator();
     boom.type = 'sawtooth'; boom.frequency.setValueAtTime(80, ctx.currentTime);
     boom.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + 0.4);
@@ -154,7 +185,6 @@ export class AudioSystem {
     boom.connect(bFilter).connect(bGain).connect(this.masterGain);
     boom.start(); boom.stop(ctx.currentTime + 0.5);
 
-    // Screech
     const bufSize = Math.floor(ctx.sampleRate * 0.6);
     const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
     const data = buf.getChannelData(0);
@@ -188,14 +218,11 @@ export class AudioSystem {
     });
   }
 
-  // ── Set breathing intensity (0–1 tied to sanity loss) ────────────
   setBreathIntensity(t) {
     if (!this.breathGain) return;
-    // Smooth ramp
     this.breathGain.gain.setTargetAtTime(t * 0.14, this.audioCtx.currentTime, 0.5);
   }
 
-  // ── Distant low thud ─────────────────────────────────────────────
   _playDistantNoise() {
     if (!this.audioCtx) return;
     const ctx = this.audioCtx;
@@ -217,6 +244,7 @@ export class AudioSystem {
   }
 
   stop() {
+    this.stopMusic();
     if (this.noiseInterval) clearInterval(this.noiseInterval);
     this.noiseInterval = null;
     if (this.monsterGrowlInterval) clearInterval(this.monsterGrowlInterval);
