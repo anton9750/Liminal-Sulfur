@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#000000">
-<title>THE BACKROOMS</title>
+<title>THE BACKROOMS</title> 
 <style>
   html, body {
     margin:0; padding:0; overflow:hidden;
@@ -28,13 +28,13 @@
 
   #hud {
     position:absolute; bottom:18px; left:18px; color:#cfc99a;
-    text-shadow: 0 0 6px #000; font-size:13px; z-index:5;
+    text-shadow: 0 0 6px #000; font-size:20px; z-index:5;
     user-select:none; pointer-events:none; line-height:1.5;
   }
-  #sanityBarOuter {
-    width:200px; height:10px; border:1px solid #888; margin-top:4px;
-    background:rgba(0,0,0,0.4);
-  }
+ #sanityBarOuter {
+  width:320px; height:18px; border:1px solid #888; margin-top:6px;
+  background:rgba(0,0,0,0.4);
+}
   #sanityBarInner {
     height:100%; width:100%; background:#c9b35b;
     transition:width .3s linear, background .5s linear;
@@ -80,7 +80,13 @@
     align-items:center; justify-content:center; z-index:50; text-align:center;
   }
   #menu h1 { font-size:42px; letter-spacing:6px; margin-bottom:6px; text-shadow: 0 0 20px #c9b35b88; }
-  #menu p { max-width:520px; color:#a89c5a; font-size:14px; line-height:1.6; margin:4px 0 26px; }
+  #menu p {
+    max-width:700px;
+    color:#a89c5a;
+    font-size:24px;
+    line-height:1.6;
+    margin:4px 0 26px;
+}
   #menu button {
     background:#1d1a0c; border:1px solid #c9b35b; color:#d8cf8e;
     padding:14px 38px; font-size:16px; letter-spacing:2px;
@@ -130,11 +136,11 @@
   #levelTransition h2 { font-size:28px; margin:0 0 12px; }
   #levelTransition p { font-size:13px; color:#5aabaa; max-width:420px; line-height:1.7; margin:0; }
 
-  #levelText {
-    position:absolute; top:18px; left:18px; z-index:5; color:#cfc99a;
-    font-size:12px; opacity:0.85; pointer-events:none; user-select:none;
-    transition: color 1s linear;
-  }
+#levelText {
+  position:absolute; top:18px; left:18px; z-index:5; color:#cfc99a;
+  font-size:20px; opacity:1; pointer-events:none; user-select:none;
+  transition: color 1s linear;
+}
 
   /* ── TOUCH / MOBILE CONTROLS ── */
   #touchControls {
@@ -190,7 +196,7 @@
   body.touch-device #touchHint { display:block !important; }
 
   @media (max-width: 560px) {
-    #menu h1 { font-size:30px; letter-spacing:3px; }
+    #menu h1 { font-size:70px; letter-spacing:8px; }
     #menu p  { font-size:13px; max-width:88vw; }
     #improvements { display:none; }
     #hud { font-size:11px; }
@@ -203,6 +209,7 @@
 <!-- MENU -->
 <div id="menu">
   <h1>THE BACKROOMS</h1>
+  <p style="color:#776c3c; font-size:12px; margin:0 0 10px;">gyserspil til min mor</p>
   <p>You noclipped into Level 0. Endless yellow halls. Flickering fluorescent lights.
   The hum of electricity that never stops. Find the pool rooms exit before something finds you.
   Stay moving — standing still too long draws its attention.</p>
