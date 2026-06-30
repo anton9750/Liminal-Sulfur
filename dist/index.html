@@ -113,6 +113,66 @@
     font-size:12px; opacity:0.85; pointer-events:none; user-select:none;
     transition: color 1s linear;
   }
+
+  /* ── TOUCH / MOBILE CONTROLS ── */
+  #touchControls {
+    display:none; /* shown via JS when a touch device is detected */
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    z-index:40; /* above canvas/HUD, below menus (50+) */
+  }
+
+  #touchLookLayer {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    touch-action:none;
+  }
+
+  #touchJoystickZone {
+    position:absolute; left:0; bottom:0;
+    width:46vw; height:46vw; max-width:240px; max-height:240px;
+    touch-action:none;
+  }
+  #touchJoystickBase {
+    position:absolute; left:28px; bottom:28px;
+    width:110px; height:110px; border-radius:50%;
+    background:rgba(200,190,140,0.08);
+    border:1px solid rgba(216,207,142,0.35);
+  }
+  #touchJoystickKnob {
+    position:absolute; left:50%; top:50%;
+    width:48px; height:48px; border-radius:50%;
+    margin-left:-24px; margin-top:-24px;
+    background:rgba(216,207,142,0.45);
+    border:1px solid rgba(216,207,142,0.7);
+    transition: background 0.1s;
+  }
+
+  #touchButtons {
+    position:absolute; right:0; bottom:0;
+    display:flex; flex-direction:column; align-items:flex-end; gap:14px;
+    padding: 0 22px 28px 0;
+    padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+  #touchButtons button {
+    pointer-events:auto; touch-action:none;
+    font-family:'Courier New', monospace; letter-spacing:1px;
+    color:#d8cf8e; background:rgba(20,18,8,0.55);
+    border:1px solid rgba(201,179,91,0.6);
+    border-radius:50%;
+    width:64px; height:64px; font-size:13px;
+  }
+  #touchSprintBtn { font-size:11px; }
+  #touchButtons button:active { background:rgba(201,179,91,0.35); }
+
+  /* Hide the desktop hint text on touch, show the touch hint instead */
+  body.touch-device #hint { display:none; }
+  body.touch-device #touchHint { display:block !important; }
+
+  @media (max-width: 560px) {
+    #menu h1 { font-size:30px; letter-spacing:3px; }
+    #menu p  { font-size:13px; max-width:88vw; }
+    #improvements { display:none; }
+    #hud { font-size:11px; }
+  }
 </style>
   <script type="module" crossorigin src="/Liminal-Sulfur/assets/index-BuscGPGd.js"></script>
 </head>
@@ -126,6 +186,9 @@
   Stay moving — standing still too long draws its attention.</p>
   <button id="startBtn">ENTER</button>
   <div id="hint">WASD to move &nbsp;·&nbsp; MOUSE to look &nbsp;·&nbsp; SHIFT to run &nbsp;·&nbsp; F flashlight</div>
+  <div id="touchHint" style="display:none; margin-top:18px; font-size:12px; color:#776c3c;">
+    LEFT joystick to move &nbsp;·&nbsp; DRAG anywhere to look &nbsp;·&nbsp; buttons to run / flashlight
+  </div>
   <div id="improvements">
     Enhanced: A* monster pathfinding · footsteps · breathing · growls · head bob ·
     screen distortion · insanity-driven flicker · prop furniture · sticky notes · exit portal
@@ -157,6 +220,20 @@
 <div id="hud">
   <div id="sanityLabel">SANITY</div>
   <div id="sanityBarOuter"><div id="sanityBarInner"></div></div>
+</div>
+
+<!-- TOUCH / MOBILE CONTROLS -->
+<div id="touchControls">
+  <div id="touchLookLayer"></div>
+  <div id="touchJoystickZone">
+    <div id="touchJoystickBase">
+      <div id="touchJoystickKnob"></div>
+    </div>
+  </div>
+  <div id="touchButtons">
+    <button id="touchFlashlightBtn" type="button" aria-label="Toggle flashlight">💡</button>
+    <button id="touchSprintBtn" type="button" aria-label="Hold to run">RUN</button>
+  </div>
 </div>
 
 <script>
