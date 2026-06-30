@@ -28,7 +28,7 @@
 
   #hud {
     position:absolute; bottom:18px; left:18px; color:#cfc99a;
-    text-shadow: 0 0 6px #000; font-size:13px; z-index:5;
+    text-shadow: 0 0 6px #000; font-size:20px; z-index:5;
     user-select:none; pointer-events:none; line-height:1.5;
   }
  #sanityBarOuter {
@@ -80,7 +80,13 @@
     align-items:center; justify-content:center; z-index:50; text-align:center;
   }
   #menu h1 { font-size:42px; letter-spacing:6px; margin-bottom:6px; text-shadow: 0 0 20px #c9b35b88; }
-  #menu p { max-width:520px; color:#a89c5a; font-size:14px; line-height:1.6; margin:4px 0 26px; }
+  #menu p {
+    max-width:700px;
+    color:#a89c5a;
+    font-size:24px;
+    line-height:1.6;
+    margin:4px 0 26px;
+}
   #menu button {
     background:#1d1a0c; border:1px solid #c9b35b; color:#d8cf8e;
     padding:14px 38px; font-size:16px; letter-spacing:2px;
@@ -190,7 +196,7 @@
   body.touch-device #touchHint { display:block !important; }
 
   @media (max-width: 560px) {
-    #menu h1 { font-size:30px; letter-spacing:3px; }
+    #menu h1 { font-size:70px; letter-spacing:8px; }
     #menu p  { font-size:13px; max-width:88vw; }
     #improvements { display:none; }
     #hud { font-size:11px; }
