@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { SceneManager }     from './core/scene.js';
 import { PlayerController } from './core/controls.js';
-import { Maze }             from './environment/maze.js';
+import { Maze, CELL }       from './environment/maze.js';
 import { PoolLevel }        from './environment/level2.js';
 import { Monster }          from './entities/monster.js';
 import { AudioSystem }      from './utils/audio.js';
@@ -60,6 +60,7 @@ let gameOver  = false;
 let won       = false;
 let transitioning = false;
 let monsterGrowlCooldown = 0;
+let monsterSawPlayerLastFrame = false;
 let jumpScareTimer = 0;
 const JUMP_SCARE_DUR = 1.2;
 
@@ -323,6 +324,23 @@ function animate() {
           audioSystem.playMonsterGrowl(proximity * 0.18);
           monsterGrowlCooldown = 2.5 + Math.random() * 2;
         }
+        // It's seen you — sharper, closer-sounding snarl as it picks up speed
+        if (result.seesPlayer && !monsterSawPlayerLastFrame && monster.active) {
+          audioSystem.playMonsterGrowl(0.3);
+        }
+        monsterSawPlayerLastFrame = result.seesPlayer;
+      }
+
+      // ── Static noise swell near flickering ceiling lights ──────────
+      if (maze && maze.flickerLights.length) {
+        let nearestDist = Infinity;
+        for (const fl of maze.flickerLights) {
+          const d = playerPos.distanceTo(fl.light.position);
+          if (d < nearestDist) nearestDist = d;
+        }
+        const LIGHT_STATIC_RANGE = CELL * 2.6; // how close before the hiss swells
+        const lightProximity = THREE.MathUtils.clamp(1 - nearestDist / LIGHT_STATIC_RANGE, 0, 1);
+        audioSystem.setLightStaticIntensity(lightProximity);
       }
 
       updateSanityFX(sanity, dt, proximity);
