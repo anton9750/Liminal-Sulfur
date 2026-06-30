@@ -7,6 +7,7 @@ import { PoolLevel }        from './environment/level2.js';
 import { Monster }          from './entities/monster.js';
 import { AudioSystem }      from './utils/audio.js';
 import { PropsManager }     from './environment/props.js';
+import { TouchControls, isTouchDevice } from './core/touchControls.js';
 
 import musicUrl from './assets/music.mp3';
 
@@ -28,6 +29,22 @@ const levelTextEl      = document.getElementById('levelText');
 
 const sceneManager = new SceneManager();
 const audioSystem  = new AudioSystem();
+
+// ── Mobile / touch support ──────────────────────────────────
+const TOUCH_DEVICE = isTouchDevice();
+if (TOUCH_DEVICE) document.body.classList.add('touch-device');
+let touchControls = null;
+
+function setupTouchControlsFor(playerController) {
+  if (!TOUCH_DEVICE) return;
+  if (!touchControls) {
+    touchControls = new TouchControls(playerController);
+  } else {
+    touchControls.player = playerController;
+  }
+  playerController.touchActive = true;
+  touchControls.show();
+}
 
 // ── Level state ──────────────────────────────────────────────
 let currentLevel = 0;
@@ -58,6 +75,7 @@ function setupLevel0() {
   sceneManager.add(sceneManager.camera);
   player.setSpawn(maze.spawnWorldPosition);
   player.onFootstep = () => audioSystem.playFootstep();
+  setupTouchControlsFor(player);
 
   monster = new Monster(maze, maze.materials, { speed: 3.2, catchDistance: 1.0 });
   props   = new PropsManager(maze, maze.group);
@@ -217,6 +235,7 @@ winScreenEl.addEventListener('click', () => {
 
 deathScreenEl.addEventListener('click', () => { if (gameOver && !won) respawnAfterDeath(); });
 document.body.addEventListener('click', () => {
+  if (TOUCH_DEVICE) return;
   if (!gameOver && menuEl.style.display === 'none') player.lock();
 });
 

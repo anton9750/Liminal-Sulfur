@@ -27,6 +27,16 @@ export class PlayerController {
     this._stepInterval = 0.42; // walking step interval (s)
     this.onFootstep    = null; // callback set by main.js
 
+    // ── Touch / mobile support ──────────────────────────────
+    // When true, update() runs gameplay even without pointer lock
+    // (mobile has no pointer-lock concept). Set by main.js once
+    // touch controls are wired up.
+    this.touchActive  = false;
+    this.touchMove    = { x: 0, z: 0 }; // virtual joystick vector, same convention as WASD dir
+    this.touchSprint  = false;
+    this.lookSensitivity = 0.0028;
+    this._lookEuler   = new THREE.Euler(0, 0, 0, 'YXZ');
+
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
       if (e.code === 'KeyF') this.flashlightOn = !this.flashlightOn;
@@ -43,8 +53,35 @@ export class PlayerController {
 
   get object() { return this.controls.getObject(); }
   get isLocked() { return this.controls.isLocked; }
-  lock()   { this.controls.lock(); }
-  unlock() { this.controls.unlock(); }
+  lock()   { if (this.touchActive) return; try { this.controls.lock(); } catch (e) { /* pointer lock unsupported, ignore */ } }
+  unlock() { if (this.touchActive) return; try { this.controls.unlock(); } catch (e) { /* ignore */ } }
+
+  /** True when gameplay should run: desktop pointer-lock OR mobile touch mode. */
+  get isActive() { return this.isLocked || this.touchActive; }
+
+  /** Set virtual joystick vector. x: -1(left)..1(right), z: -1(forward)..1(back). */
+  setVirtualMove(x, z) {
+    this.touchMove.x = x;
+    this.touchMove.z = z;
+  }
+
+  setTouchSprint(on) { this.touchSprint = on; }
+
+  toggleFlashlight() { this.flashlightOn = !this.flashlightOn; }
+
+  /**
+   * Rotate the camera directly by a screen-space drag delta. Mirrors
+   * PointerLockControls' internal math so it behaves consistently
+   * whether driven by mouse (locked) or touch (unlocked) input.
+   */
+  lookBy(dx, dy) {
+    this._lookEuler.setFromQuaternion(this.camera.quaternion);
+    this._lookEuler.y -= dx * this.lookSensitivity;
+    this._lookEuler.x -= dy * this.lookSensitivity;
+    const eps = 0.001;
+    this._lookEuler.x = Math.max(-Math.PI / 2 + eps, Math.min(Math.PI / 2 - eps, this._lookEuler.x));
+    this.camera.quaternion.setFromEuler(this._lookEuler);
+  }
 
   setSpawn(pos) {
     this.object.position.set(pos.x, this._baseY, pos.z);
@@ -56,7 +93,7 @@ export class PlayerController {
     this.flashlight.intensity +=
       ((this.flashlightOn ? 1.6 : 0) - this.flashlight.intensity) * 0.15;
 
-    if (!this.isLocked) return false;
+    if (!this.isActive) return false;
 
     const dir = new THREE.Vector3();
     if (this.keys['KeyW']) dir.z -= 1;
@@ -64,12 +101,19 @@ export class PlayerController {
     if (this.keys['KeyA']) dir.x -= 1;
     if (this.keys['KeyD']) dir.x += 1;
 
-    const moving = dir.lengthSq() > 0;
-    const sprinting = moving && (this.keys['ShiftLeft'] || this.keys['ShiftRight']);
+    // Virtual joystick (mobile) — additive so a future gamepad/keyboard
+    // combo still works, then re-clamped via normalize() below.
+    dir.x += this.touchMove.x;
+    dir.z += this.touchMove.z;
+
+    const moving = dir.lengthSq() > 0.0001;
+    const sprinting = moving && (this.keys['ShiftLeft'] || this.keys['ShiftRight'] || this.touchSprint);
     const speed = sprinting ? SPRINT_SPEED : WALK_SPEED;
 
     if (moving) {
-      dir.normalize();
+      // Clamp to length 1 instead of always normalizing to exactly 1,
+      // so a partially-pushed virtual joystick still feels analog.
+      if (dir.length() > 1) dir.normalize();
       const forward = new THREE.Vector3();
       this.camera.getWorldDirection(forward);
       forward.y = 0; forward.normalize();
