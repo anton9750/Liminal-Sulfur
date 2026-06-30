@@ -1,54 +1,116 @@
 // src/main.js
 import * as THREE from 'three';
-import { SceneManager }    from './core/scene.js';
+import { SceneManager }     from './core/scene.js';
 import { PlayerController } from './core/controls.js';
 import { Maze }             from './environment/maze.js';
+import { PoolLevel }        from './environment/level2.js';
 import { Monster }          from './entities/monster.js';
 import { AudioSystem }      from './utils/audio.js';
 import { PropsManager }     from './environment/props.js';
 
-// Import music so Vite handles it correctly
 import musicUrl from './assets/music.mp3';
 
-const menuEl        = document.getElementById('menu');
-const startBtn      = document.getElementById('startBtn');
-const deathScreenEl = document.getElementById('deathScreen');
-const winScreenEl   = document.getElementById('winScreen');
-const sanityBar     = document.getElementById('sanityBarInner');
-const staticOverlay = document.getElementById('staticOverlay');
-const distortEl     = document.getElementById('distortOverlay');
-const vignetteEl    = document.getElementById('vignette');
-const jumpScareEl   = document.getElementById('jumpScare');
-const levelTextEl   = document.getElementById('levelText');
+const menuEl           = document.getElementById('menu');
+const startBtn         = document.getElementById('startBtn');
+const deathScreenEl    = document.getElementById('deathScreen');
+const winScreenEl      = document.getElementById('winScreen');
+const winH1            = winScreenEl.querySelector('h1');
+const winP             = winScreenEl.querySelector('p');
+const winCta           = document.getElementById('winCta');
+const levelTransEl     = document.getElementById('levelTransition');
+const sanityBar        = document.getElementById('sanityBarInner');
+const sanityLabel      = document.getElementById('sanityLabel');
+const staticOverlay    = document.getElementById('staticOverlay');
+const distortEl        = document.getElementById('distortOverlay');
+const vignetteEl       = document.getElementById('vignette');
+const jumpScareEl      = document.getElementById('jumpScare');
+const levelTextEl      = document.getElementById('levelText');
 
 const sceneManager = new SceneManager();
-const maze         = new Maze();
-sceneManager.add(maze.group);
+const audioSystem  = new AudioSystem();
 
-const player  = new PlayerController(sceneManager.camera, document.body, maze.walls);
-sceneManager.add(sceneManager.camera);
-player.setSpawn(maze.spawnWorldPosition);
-
-const monster     = new Monster(maze, maze.materials, { speed: 3.2, catchDistance: 1.0 });
-const audioSystem = new AudioSystem();
-const props       = new PropsManager(maze, maze.group);
+// ── Level state ──────────────────────────────────────────────
+let currentLevel = 0;
+let maze         = null;
+let poolLevel    = null;
+let props        = null;
+let monster      = null;
+let player       = null;
 
 let sanity    = 100;
 let idleTimer = 0;
 let gameOver  = false;
 let won       = false;
+let transitioning = false;
 let monsterGrowlCooldown = 0;
-
 let jumpScareTimer = 0;
 const JUMP_SCARE_DUR = 1.2;
 
+// ── Level 0 setup ────────────────────────────────────────────
+function setupLevel0() {
+  currentLevel = 0;
+  sanity = 100; idleTimer = 0; gameOver = false; won = false;
+
+  maze = new Maze();
+  sceneManager.add(maze.group);
+
+  player = new PlayerController(sceneManager.camera, document.body, maze.walls);
+  sceneManager.add(sceneManager.camera);
+  player.setSpawn(maze.spawnWorldPosition);
+  player.onFootstep = () => audioSystem.playFootstep();
+
+  monster = new Monster(maze, maze.materials, { speed: 3.2, catchDistance: 1.0 });
+  props   = new PropsManager(maze, maze.group);
+
+  sceneManager.scene.background = new THREE.Color(0x3a3417);
+  sceneManager.scene.fog = new THREE.FogExp2(0x4a4420, 0.045);
+
+  levelTextEl.textContent = 'LEVEL 0';
+  levelTextEl.style.color = '#cfc99a';
+  vignetteEl.style.opacity = '0.6';
+  sanityLabel.style.display = '';
+  document.getElementById('sanityBarOuter').style.display = '';
+}
+
+// ── Level 2 setup ────────────────────────────────────────────
+function setupLevel2() {
+  currentLevel = 2;
+  sanity = 100; idleTimer = 0; gameOver = false; won = false;
+
+  // Tear down level 0
+  if (maze)    sceneManager.scene.remove(maze.group);
+  if (monster) monster.deactivate();
+  props = null;
+
+  poolLevel = new PoolLevel();
+  sceneManager.add(poolLevel.group);
+
+  player.walls = poolLevel.walls;
+  player.setSpawn(poolLevel.spawnWorldPosition);
+
+  sceneManager.scene.background = new THREE.Color(0xd0e8ec);
+  sceneManager.scene.fog = new THREE.FogExp2(0xcce4e8, 0.016);
+
+  levelTextEl.textContent = 'LEVEL 2 — THE POOL ROOMS';
+  levelTextEl.style.color = '#88dddd';
+
+  document.body.style.filter = '';
+  staticOverlay.style.opacity = '0';
+  distortEl.style.opacity = '0';
+  vignetteEl.style.opacity = '0.15';
+
+  // Hide sanity bar — no sanity mechanic in pool rooms
+  sanityLabel.style.display = 'none';
+  document.getElementById('sanityBarOuter').style.display = 'none';
+}
+
+// ── Death / win ──────────────────────────────────────────────
 function triggerDeath() {
   gameOver = true;
   player.unlock();
   audioSystem.playJumpScare();
   jumpScareEl.style.opacity = '1';
   jumpScareTimer = JUMP_SCARE_DUR;
-
   setTimeout(() => {
     jumpScareEl.style.opacity = '0';
     deathScreenEl.style.display = 'flex';
@@ -56,51 +118,98 @@ function triggerDeath() {
 }
 
 function triggerWin() {
+  if (currentLevel === 0) {
+    // Show transition to Level 2
+    gameOver = true;
+    player.unlock();
+    transitioning = true;
+
+    winH1.textContent = 'LEVEL 0 CLEARED';
+    winP.textContent  = 'The portal hums. Something shifts behind your eyes. The Pool Rooms await.';
+    winCta.textContent = 'click to descend';
+    winScreenEl.style.background = 'radial-gradient(ellipse at center, #082215 0%, #000 100%)';
+    winScreenEl.style.color = '#44ffaa';
+    winScreenEl.style.display = 'flex';
+    return;
+  }
+
+  // Level 2 "win" — true ending
   won = true;
   gameOver = true;
   player.unlock();
   audioSystem.playExitChime();
+  winH1.textContent = 'YOU ESCAPED';
+  winP.textContent  = 'The Pool Rooms let you go. The humming fades. For now, you are free.';
+  winCta.textContent = 'click to play again';
+  winScreenEl.style.background = 'radial-gradient(ellipse at center, #001822 0%, #000 100%)';
+  winScreenEl.style.color = '#88dddd';
   winScreenEl.style.display = 'flex';
 }
 
-function respawnPlayer() {
-  sanity = 100;
-  idleTimer = 0;
-  gameOver = false;
-  won = false;
-  monster.deactivate();
-  player.setSpawn(maze.spawnWorldPosition);
+function respawnAfterDeath() {
+  sanity = 100; idleTimer = 0; gameOver = false; won = false;
+  if (monster) monster.deactivate();
+
+  const spawnPos = currentLevel === 0 ? maze.spawnWorldPosition : poolLevel.spawnWorldPosition;
+  player.setSpawn(spawnPos);
+
   deathScreenEl.style.display = 'none';
-  winScreenEl.style.display = 'none';
   staticOverlay.style.opacity = '0';
   distortEl.style.opacity = '0';
-  vignetteEl.style.opacity = '0.6';
-
+  vignetteEl.style.opacity = currentLevel === 0 ? '0.6' : '0.15';
+  document.body.style.filter = '';
   audioSystem.stopMusic();
   player.lock();
 }
 
-deathScreenEl.addEventListener('click', () => { if (gameOver && !won) respawnPlayer(); });
-winScreenEl.addEventListener('click', () => { if (won) respawnPlayer(); });
+function doLevelTransition() {
+  winScreenEl.style.display = 'none';
+  transitioning = false;
 
+  // Quick fade-to-black then reveal
+  levelTransEl.style.display = 'flex';
+  setTimeout(() => {
+    setupLevel2();
+    player.lock();
+    setTimeout(() => {
+      levelTransEl.style.display = 'none';
+    }, 1800);
+  }, 1200);
+}
+
+// Win screen click handler
+winScreenEl.addEventListener('click', () => {
+  if (transitioning) {
+    doLevelTransition();
+  } else if (won) {
+    // Restart entirely
+    sceneManager.scene.remove(poolLevel?.group);
+    sceneManager.scene.remove(maze?.group);
+    setupLevel0();
+    sanityLabel.style.display = '';
+    document.getElementById('sanityBarOuter').style.display = '';
+    winScreenEl.style.display = 'none';
+    player.lock();
+  }
+});
+
+deathScreenEl.addEventListener('click', () => { if (gameOver && !won) respawnAfterDeath(); });
 document.body.addEventListener('click', () => {
   if (!gameOver && menuEl.style.display === 'none') player.lock();
 });
 
-player.onFootstep = () => audioSystem.playFootstep();
-
+// ── Sanity FX (level 0 only) ─────────────────────────────────
 let distortPhase = 0;
 
 function updateSanityFX(sanity, dt, proximity) {
-  sanityBar.style.width = sanity + '%';
+  sanityBar.style.width      = sanity + '%';
   sanityBar.style.background = sanity > 60 ? '#c9b35b' : sanity > 30 ? '#b06a2a' : '#9c2a2a';
 
   const vigOpacity = 0.6 + (1 - sanity / 100) * 0.35;
   vignetteEl.style.opacity = vigOpacity.toString();
 
   if (proximity > 0) {
-    const noise = Math.random() * 0.04;
-    staticOverlay.style.opacity = (proximity * 0.38 + noise).toString();
+    staticOverlay.style.opacity = (proximity * 0.38 + Math.random() * 0.04).toString();
   } else {
     staticOverlay.style.opacity = '0';
   }
@@ -115,78 +224,83 @@ function updateSanityFX(sanity, dt, proximity) {
     ? `hue-rotate(${hueShift.toFixed(1)}deg) blur(${blurAmt.toFixed(2)}px) saturate(${saturate.toFixed(2)})`
     : '';
 
-  maze.setInsanity(insane);
+  if (maze) maze.setInsanity(insane);
   audioSystem.setBreathIntensity(insane);
 }
 
+// ── Main loop ────────────────────────────────────────────────
 const clock = new THREE.Clock();
 
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
+  const t  = performance.now() / 1000;
 
-  props.update(dt);
-  maze.updateFlicker(performance.now() / 1000);
-
+  if (currentLevel === 0 && maze)       maze.updateFlicker(t);
+  if (currentLevel === 2 && poolLevel)  { poolLevel.updateFlicker(t); poolLevel.update(dt); }
+  if (props) props.update(dt);
   if (jumpScareTimer > 0) jumpScareTimer -= dt;
 
   if (!gameOver) {
-    const moved = player.update(dt);
-    idleTimer = moved ? 0 : idleTimer + dt;
-
-    sanity -= dt * (idleTimer > 4 ? 4.5 : 0.6);
-    sanity = Math.max(0, Math.min(100, sanity));
-
-    if (sanity < 20 && !audioSystem.musicSource && audioSystem.musicBuffer) {
-      audioSystem.playMusic();
-    }
-
+    const moved    = player.update(dt);
+    idleTimer      = moved ? 0 : idleTimer + dt;
     const playerPos = player.object.position;
 
-    if (!monster.active && sanity < 35) {
-      monster.activate(playerPos);
-    }
+    // ── Level 0 logic ──────────────────────────────────────
+    if (currentLevel === 0) {
+      sanity -= dt * (idleTimer > 4 ? 4.5 : 0.6);
+      sanity  = Math.max(0, Math.min(100, sanity));
 
-    let proximity = 0;
-    if (monster.active) {
-      const result = monster.update(dt, playerPos);
-      proximity = result.proximity;
-      if (result.caught) triggerDeath();
-
-      monsterGrowlCooldown -= dt;
-      if (proximity > 0.5 && monsterGrowlCooldown <= 0) {
-        audioSystem.playMonsterGrowl(proximity * 0.18);
-        monsterGrowlCooldown = 2.5 + Math.random() * 2;
+      if (sanity < 20 && !audioSystem.musicSource && audioSystem.musicBuffer) {
+        audioSystem.playMusic();
       }
+
+      if (!monster.active && sanity < 35) monster.activate(playerPos);
+
+      let proximity = 0;
+      if (monster.active) {
+        const result = monster.update(dt, playerPos);
+        proximity = result.proximity;
+        if (result.caught) triggerDeath();
+
+        monsterGrowlCooldown -= dt;
+        if (proximity > 0.5 && monsterGrowlCooldown <= 0) {
+          audioSystem.playMonsterGrowl(proximity * 0.18);
+          monsterGrowlCooldown = 2.5 + Math.random() * 2;
+        }
+      }
+
+      updateSanityFX(sanity, dt, proximity);
+
+      if (props && props.playerAtExit(playerPos)) triggerWin();
+
+      const toExit = props?.exitPortalWorldPos
+        ? playerPos.distanceTo(props.exitPortalWorldPos) : 999;
+      levelTextEl.textContent = toExit < 20 ? 'LEVEL 0 › EXIT NEARBY' : 'LEVEL 0';
+      levelTextEl.style.color = toExit < 20 ? '#88ffcc' : '#cfc99a';
     }
 
-    updateSanityFX(sanity, dt, proximity);
-
-    if (props.playerAtExit(playerPos)) triggerWin();
-
-    const toExit = props.exitPortalWorldPos ? playerPos.distanceTo(props.exitPortalWorldPos) : 999;
-    if (toExit < 20) {
-      levelTextEl.textContent = 'LEVEL 0 › EXIT NEARBY';
-      levelTextEl.style.color = '#88ffcc';
-    } else {
-      levelTextEl.textContent = 'LEVEL 0';
-      levelTextEl.style.color = '#cfc99a';
+    // ── Level 2 logic ──────────────────────────────────────
+    if (currentLevel === 2) {
+      // No sanity drain, no monster — serene but unsettling exploration
+      // (future: add exit portal to true ending)
     }
   }
 
   sceneManager.render();
 }
 
-// START
+// ── START ────────────────────────────────────────────────────
 startBtn.addEventListener('click', async () => {
   menuEl.style.display = 'none';
   sceneManager.renderer.domElement.focus();
-  player.lock();
 
+  setupLevel0();
+  player.lock();
   audioSystem.start();
 
   try {
-    await audioSystem.loadMusic(musicUrl);   // ← Use imported URL
+    await audioSystem.loadMusic(musicUrl);
     console.log('✅ Music loaded');
   } catch (e) {
     console.error('❌ Music failed to load:', e);

@@ -104,9 +104,22 @@
     color:#44ffaa; display:none; z-index:60;
     flex-direction:column; align-items:center; justify-content:center;
     font-size:30px; letter-spacing:4px; text-align:center;
+    transition: background 1s ease;
   }
+  #winScreen h1 { font-size:30px; letter-spacing:4px; margin:0; }
   #winScreen p { font-size:14px; color:#55bb88; margin-top:12px; max-width:440px; line-height:1.6; }
   #winScreen span { font-size:13px; color:#336644; margin-top:20px; letter-spacing:2px; }
+
+  /* ── LEVEL TRANSITION ── */
+  #levelTransition {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:#000; z-index:65; display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    color:#88dddd; font-family:'Courier New', monospace; text-align:center;
+    letter-spacing:4px;
+  }
+  #levelTransition h2 { font-size:28px; margin:0 0 12px; }
+  #levelTransition p { font-size:13px; color:#5aabaa; max-width:420px; line-height:1.7; margin:0; }
 
   #levelText {
     position:absolute; top:18px; left:18px; z-index:5; color:#cfc99a;
@@ -138,15 +151,27 @@
   <div class="flavor" id="deathFlavor"></div>
 </div>
 
-<!-- WIN -->
+<!-- WIN / LEVEL TRANSITION -->
 <div id="winScreen">
-  YOU ESCAPED
-  <p>You found the Pool Rooms exit.<br>The humming fades. For now, you are free.</p>
-  <span>click to try again</span>
+  <h1>ENTERING LEVEL 2</h1>
+  <p>The portal hums. Something shifts behind your eyes.<br>The Pool Rooms await.</p>
+  <span id="winCta">click to continue</span>
+</div>
+
+<!-- LEVEL TRANSITION FADE -->
+<div id="levelTransition">
+  <h2>LEVEL 2</h2>
+  <p>THE POOL ROOMS<br><br>Warm water. White tile.<br>No exit you can see.</p>
 </div>
 
 <!-- JUMP SCARE -->
 <div id="jumpScare">👁</div>
+
+<!-- LEVEL TRANSITION SCREEN -->
+<div id="levelTransition">
+  <h2>LEVEL 2</h2>
+  <p>THE POOL ROOMS<br><br>Warm water. White tile everywhere.<br>No exit you can see.</p>
+</div>
 
 <div id="crosshair"></div>
 <div id="vignette"></div>
